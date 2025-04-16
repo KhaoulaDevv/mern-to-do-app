@@ -163,14 +163,6 @@ router.delete("/:id", auth, async (req, res) => {
 - **Fonctionnalités additionnelles** : Catégorisation, dates d'échéance, partage
 - **Aspects techniques** : Tests, CI/CD, documentation API, optimisation
 
-## 📝 Licence
-
-Ce projet est sous licence MIT - voir le fichier LICENSE pour plus de détails.
-
-## 👥 Contributeurs
-
-- [Votre Nom](https://github.com/votrenomdutilisateur)
-
 ---
 
 *Note : Ce README a été mis à jour le 16 avril 2025.*
