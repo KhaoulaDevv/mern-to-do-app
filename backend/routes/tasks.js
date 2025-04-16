@@ -3,42 +3,93 @@ const router = express.Router();
 const Task = require("../models/Task");
 const auth = require("../middleware/auth");
 
-// Récupérer les tâches
+// Get all tasks
 router.get("/", auth, async (req, res) => {
   try {
-    const tasks = await Task.find({ user: req.user.id });
+    const tasks = await Task.find({ user: req.user.id }).sort({
+      createdAt: -1,
+    });
     res.json(tasks);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error(err.message);
+    res.status(500).send("Erreur serveur");
   }
 });
 
-// Ajouter une tâche
+// Create a task
 router.post("/", auth, async (req, res) => {
+  const { title, completed, dueDate, priority } = req.body;
+
   try {
-    const task = new Task({ title: req.body.title, user: req.user.id });
-    await task.save();
+    // Create new task object with all fields
+    const newTask = new Task({
+      title,
+      completed: completed || false,
+      user: req.user.id,
+      dueDate: dueDate || null,
+      priority: priority || "medium",
+    });
+
+    const task = await newTask.save();
     res.json(task);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error(err.message);
+    res.status(500).send("Erreur serveur");
   }
 });
 
-// Supprimer une tâche
-router.delete("/:id", auth, async (req, res) => {
+// Update a task
+router.put("/:id", auth, async (req, res) => {
+  const { title, completed, dueDate, priority } = req.body;
+
+  // Build task object based on submitted fields
+  const taskFields = {};
+  if (title !== undefined) taskFields.title = title;
+  if (completed !== undefined) taskFields.completed = completed;
+  if (dueDate !== undefined) taskFields.dueDate = dueDate;
+  if (priority !== undefined) taskFields.priority = priority;
+
   try {
-    const task = await Task.findOne({ _id: req.params.id, user: req.user.id });
+    let task = await Task.findById(req.params.id);
+
     if (!task) return res.status(404).json({ message: "Tâche non trouvée" });
 
-    // Replace task.remove() with Task.deleteOne()
-    await Task.deleteOne({ _id: req.params.id });
+    // Make sure user owns task
+    if (task.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+
+    task = await Task.findByIdAndUpdate(
+      req.params.id,
+      { $set: taskFields },
+      { new: true }
+    );
+
+    res.json(task);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Erreur serveur");
+  }
+});
+
+// Delete a task
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    let task = await Task.findById(req.params.id);
+
+    if (!task) return res.status(404).json({ message: "Tâche non trouvée" });
+
+    // Make sure user owns task
+    if (task.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: "Non autorisé" });
+    }
+
+    await Task.findByIdAndRemove(req.params.id);
 
     res.json({ message: "Tâche supprimée" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur lors de la suppression" });
+    console.error(err.message);
+    res.status(500).send("Erreur serveur");
   }
 });
 
